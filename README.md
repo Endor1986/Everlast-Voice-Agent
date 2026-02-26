@@ -1,3 +1,12 @@
+<p align="center">
+  <img alt="Next.js" src="https://img.shields.io/badge/Next.js-15-black?logo=next.js&logoColor=white">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5%2B-3178C6?logo=typescript&logoColor=white">
+  <img alt="Voice" src="https://img.shields.io/badge/Voice-Browser%20Speech-ff9800">
+  <img alt="AI" src="https://img.shields.io/badge/AI-Local%20or%20Cloud-6a5acd">
+  <img alt="Provider" src="https://img.shields.io/badge/Provider-Env%20Switch-success">
+  <img alt="License" src="https://img.shields.io/badge/License-MIT-lightgrey.svg">
+</p>
+
 # Everlast Voice Agent
 
 Browserbasierter Voice Agent zur strukturierten Terminaufnahme.  
