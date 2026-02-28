@@ -12,7 +12,9 @@
 Browserbasierter Voice Agent zur strukturierten Terminaufnahme.  
 Proof of Concept für ein sprachgesteuertes Termin und Anfrage System.
 
-Status: **Day 0, Projektbasis und Architektur**
+Status: **Day 3 abgeschlossen (Voice Input und Voice Output in Free und Pro)**
+
+Hinweis zum Scope: Dieses Projekt ist bewusst ein Lernprojekt und Proof of Concept. Die Architektur ist offen gehalten, damit später Erweiterungen möglich sind (UI, Flow Logik, Persistenz, Backend Anbindung, Prompting, weitere Voices). Für Day 3 bleibt der Umfang bewusst kompakt, damit der Kontext nicht ausufert.
 
 ## Projektziel
 
@@ -20,7 +22,7 @@ Der Everlast Voice Agent soll Termine und Anfragen per Sprache erfassen, struktu
 
 Das System wird schrittweise aufgebaut, damit jeder Entwicklungstag nachvollziehbar dokumentiert ist.
 
-Day 0 beschreibt die technische Grundlage vor der eigentlichen Agent Logik.
+Day 0 beschreibt die technische Grundlage. Day 1 bis Day 3 bauen darauf auf und bringen den Voice Agent bis zum ersten End to End Setup (Free und Pro).
 
 ## Architekturentscheidung und Scope
 
@@ -38,6 +40,14 @@ Die finale Entscheidung, ob der produktive Betrieb später lokal oder online lä
 - Browser Speech APIs angebunden
 - Lokale Entwicklungsumgebung eingerichtet
 - Provider Schnittstelle vorbereitet, um Local oder Cloud per Environment zu wählen
+
+## Day 3, Voice End to End
+
+- Voice Input ist aktiv (SpeechRecognition)
+- Voice Output ist aktiv (Browser TTS)
+- Free Mode nutzt den bestehenden Flow (AgentFlow)
+- Pro Mode nutzt `/api/pro` für Local AI (z. B. Ollama) und liest Antworten vor
+
 
 ## Tech Stack
 
@@ -89,15 +99,34 @@ npm start
 ## Nächste Schritte
 
 Day 1  
-Voice UI aktivieren  
+erledigt: Voice UI aktivieren  
 
 Day 2  
-Provider Anbindung, zuerst Local  
+erledigt: Provider Anbindung, zuerst Local  
 
 Day 3  
-Voice Agent Verbindung und erstes End to End
+erledigt: Voice Agent Verbindung und erstes End to End  
 
-## Author
+Optional (wenn du später weitergehst)  
+
+Day 4  
+UI Polishing und klare Mode Indikatoren  
+
+Day 5  
+Stabilisierung der Dialog Steuerung, besseres Prompting für Pro, optional weitere Voices  
+
+## Videos
+
+Day 1  
+folgt  
+
+Day 2  
+folgt  
+
+Day 3  
+folgt  
+
+## Author## Author
 
 Phillip Kley  
 Everlast Voice Agent Prototype

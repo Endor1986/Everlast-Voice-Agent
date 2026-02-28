@@ -1,104 +1,53 @@
 # Everlast Voice Agent
 
-Browserbasierter Voice-Agent zur strukturierten Terminaufnahme.
-Proof-of-Concept für ein sprachgesteuertes Termin- und Anfrage-System.
+Browserbasierter Voice Agent zur strukturierten Terminaufnahme. Proof of Concept für ein sprachgesteuertes Termin und Anfrage System.
 
-Status: Day-2 MVP stabil (Local AI Integration)
+Status: Day 3 abgeschlossen (Voice Input und Voice Output in Free und Pro)
 
----
+## Hinweis zum Scope
+
+Dieses Projekt ist bewusst ein Lernprojekt und Proof of Concept. Die Architektur ist offen gehalten, damit später Erweiterungen möglich sind (zum Beispiel UI, Flow Logik, Persistenz, Backend Anbindung, Prompting, weitere Voices). Für Day 3 bleibt der Umfang absichtlich kompakt, damit der Kontext nicht ausufert.
 
 ## Projektziel
 
-Der Everlast Voice Agent soll Termine und Anfragen über Sprache erfassen, strukturieren und später an ein Backend übergeben.
-Das System wird bewusst schrittweise aufgebaut, um jeden Entwicklungstag sauber nachvollziehen zu können.
+Der Everlast Voice Agent erfasst Termine und Anfragen über Sprache oder Texteingabe, strukturiert die Informationen und kann später an ein Backend übergeben werden. Das System wird schrittweise aufgebaut und bewusst iterativ erweitert.
 
----
+## Features
 
-## Funktionen (Day 1)
+### Free (Browser Mode)
 
-* Browser SpeechRecognition ohne API Keys
-* Browser Text-to-Speech Ausgabe
-* Geführter Dialog-Flow
-* Anliegen → Thema → Name → Kontakt → Termin
-* Kontakt nur per Eingabefeld (kein Voice-Kontakt mehr)
-* Telefonnummern werden für TTS korrekt einzeln vorgelesen
-* Datum / Wochentag / Uhrzeit frei formulierbar
-* Automatische Zusammenfassung
-* Stabiler Produktions-Build möglich
+- Spracheingabe über SpeechRecognition
+- Sprachausgabe über Browser TTS
+- Dialoglogik über den bestehenden Day 1 Flow (AgentFlow)
+- Kontakt bleibt im Free Flow per Eingabefeld (Voice ist dort bewusst gesperrt)
 
----
+### Pro (API Mode)
 
-## Funktionen (Day 2)
-
-* Local AI Integration via Ollama
-* Eigene API Route zum lokalen Sprachmodell
-* Offline Gesprächskern ohne Cloud-Abhängigkeit
-* Keine API Keys erforderlich
-* Kostenlos betreibbare KI-Grundlage
-* Basis für Voice-Agent-Logik
-
----
-
-## Tech Stack
-
-* Next.js 15 (App Router)
-* TypeScript
-* React Hooks State Flow
-* Browser Speech API
-* Lokale Flow-State-Machine
-* Local LLM (Ollama)
-
----
+- Spracheingabe über denselben Start Button (SpeechRecognition)
+- Antworten kommen über `/api/pro` (lokales Ollama) und werden vorgelesen
+- Eigener Pro Starttext beim Umschalten oder Reset:
+  „Das ist der Pro Modus von Everlast. Was kann ich für dich tun?“
+- Pro bevorzugt die Stimme „Katja“, Free bleibt unverändert
 
 ## Projektstruktur
 
-src/
-├── app/page.tsx
-│   UI, Voice Control, Flow Rendering
-│
-├── lib/day1/agentFlow.ts
-│   Dialog-Logik / Zustandsmaschine
-│
-├── lib/day1/browserSpeech.ts
-│   SpeechRecognition Wrapper
-│
-├── app/api/pro/route.ts
-│   Local AI Verbindung (Ollama)
-│
-├── types/
-│   Typdefinitionen
+- `src/app/page.tsx`  
+  UI, Mode Switch, Voice Start Stop, Pro Init, Pro TTS
 
----
+- `src/lib/day1/agentFlow.ts`  
+  Dialog Logik und Zustandsmaschine
+
+- `src/lib/day1/browserSpeech.ts`  
+  SpeechRecognition Wrapper und Browser TTS, inklusive Sprach Rate (de, en) und optionaler bevorzugter Voice
+
+- `src/app/api/pro/route.ts`  
+  Pro API Route, Verbindung zu Ollama
+
+- `next.config.ts`  
+  Windows Fix: `distDir: ".next-local"` und `outputFileTracingRoot`
 
 ## Development
 
+```bash
 npm install
 npm run dev
-
-Dann öffnen:
-[http://localhost:3000](http://localhost:3000)
-
----
-
-## Build
-
-npm run build
-npm start
-
----
-
-## Roadmap
-
-Day 3
-
-* Voice Layer Integration (Speech-to-Text & TTS)
-* Sprachgesteuerte Dialogsteuerung
-* Übergabe an Local AI
-* Antwort als Sprache ausgeben
-
----
-
-## Author
-
-Phillip Kley
-Everlast Voice Agent Prototype

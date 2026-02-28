@@ -32,64 +32,56 @@ export default function Page() {
 
   const [flowState, setFlowState] = useState<FlowState>("WELCOME");
   const [slots, setSlots] = useState<Slots>({});
-  const [summary, setSummary] = useState<string>("");
+  const [summary, setSummary] = useState("");
 
   const [chat, setChat] = useState<ChatMessage[]>([]);
 
   const recRef = useRef<SpeechRecognition | null>(null);
-  const finalTextRef = useRef<string>("");
+  const finalTextRef = useRef("");
 
   const [browserSupported, setBrowserSupported] = useState(false);
-  useEffect(() => {
-    setBrowserSupported(isBrowserRecognitionSupported());
-  }, []);
 
   const flowStateRef = useRef<FlowState>("WELCOME");
   const slotsRef = useRef<Slots>({});
   const statusRef = useRef<AgentStatus>("idle");
   const modeRef = useRef<Mode>("browser");
-  const transcriptRef = useRef<string>("");
-  const interimRef = useRef<string>("");
+  const transcriptRef = useRef("");
+  const interimRef = useRef("");
 
   useEffect(() => {
     flowStateRef.current = flowState;
   }, [flowState]);
-
   useEffect(() => {
     slotsRef.current = slots;
   }, [slots]);
-
   useEffect(() => {
     statusRef.current = status;
   }, [status]);
-
   useEffect(() => {
     modeRef.current = mode;
   }, [mode]);
-
   useEffect(() => {
     transcriptRef.current = transcript;
   }, [transcript]);
-
   useEffect(() => {
     interimRef.current = interim;
   }, [interim]);
+
+  useEffect(() => {
+    // keep page resilient even if an import/export mismatch happens
+    try {
+      const fn: unknown = isBrowserRecognitionSupported;
+      setBrowserSupported(typeof fn === "function" ? !!(fn as any)() : false);
+    } catch {
+      setBrowserSupported(false);
+    }
+  }, []);
 
   const [contactDraft, setContactDraft] = useState("");
   const contactInputRef = useRef<HTMLInputElement | null>(null);
 
   function push(role: "user" | "agent", text: string) {
     setChat((prev) => [...prev, { id: uid(), role, text, ts: Date.now() }]);
-  }
-
-  function submitTypedText() {
-    const v = (typedText ?? "").toString().trim();
-    if (!v) return;
-
-    stopSpeaking();
-    setTypedText("");
-    push("user", v);
-    void handleAgentTurn(v);
   }
 
   async function speak(text: string) {
@@ -128,7 +120,6 @@ export default function Page() {
         const rest = digits.slice(2);
         return `plus neunundvierzig, ${speakDigits(rest)}`;
       });
-
       s = s.replace(/\b\d{10,}\b/g, (m) => speakDigits(m));
       return s;
     };
@@ -137,33 +128,78 @@ export default function Page() {
 
     try {
       setStatus("speaking");
-
       await new Promise((r) => setTimeout(r, 220));
-
       await speakBrowser(spoken, locale);
 
       const low = spoken.toLowerCase();
-      if (low.includes("datum") || low.includes("uhrzeit") || low.includes("tageszeit")) {
-        await new Promise((r) => setTimeout(r, 900));
-      } else {
-        await new Promise((r) => setTimeout(r, 320));
-      }
+      await new Promise((r) =>
+        setTimeout(r, low.includes("datum") || low.includes("uhrzeit") || low.includes("tageszeit") ? 900 : 320)
+      );
     } finally {
       setStatus("idle");
     }
   }
 
-  useEffect(() => {
+  async function runProTurn(userText: string) {
+    const res = await fetch("/api/pro", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userText }),
+    });
+
+    const data = await res.json().catch(() => ({} as any));
+    if (!res.ok || !data?.ok) {
+      throw new Error(String(data?.error ?? "Pro API Fehler"));
+    }
+    return String(data?.reply ?? "");
+  }
+
+  async function initConversation(nextMode: Mode) {
+    stopSpeaking();
+    try {
+      recRef.current?.abort();
+    } catch {}
+    recRef.current = null;
+
+    setIsRecording(false);
+    setStatus("idle");
+    setInterim("");
+    setTranscript("");
+    finalTextRef.current = "";
+
+    setFlowState("WELCOME");
+    setSlots({});
+    setSummary("");
+    setContactDraft("");
+
+    if (nextMode === "pro") {
+      try {
+        const reply = await runProTurn("");
+        setChat([{ id: uid(), role: "agent", text: reply, ts: Date.now() }]);
+        await speak(reply);
+      } catch (err: any) {
+        const msg = "Pro Fehler: " + String(err?.message ?? "unknown");
+        setChat([{ id: uid(), role: "agent", text: msg, ts: Date.now() }]);
+        await speak(msg);
+      }
+      return;
+    }
+
     const first = runAgentTurn({ userText: "", state: "WELCOME", slots: {} });
     setFlowState(first.nextState);
     setSlots(first.nextSlots);
     setSummary(first.summary ?? "");
     setChat([{ id: uid(), role: "agent", text: first.reply, ts: Date.now() }]);
-    void speak(first.reply);
+    await speak(first.reply);
+  }
+
+  useEffect(() => {
+    void initConversation("browser");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (flowState === "ASK_CONTACT") {
+    if (flowState === "ASK_CONTACT" && modeRef.current === "browser") {
       try {
         recRef.current?.stop();
       } catch {}
@@ -176,24 +212,11 @@ export default function Page() {
     }
   }, [flowState]);
 
-  async function runProTurn(userText: string) {
-    const res = await fetch("/api/pro", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userText }),
-    });
-
-    const data = await res.json().catch(() => ({} as any));
-    if (!res.ok || !data?.ok) {
-      throw new Error(data?.error || "Pro API Fehler");
-    }
-    return String(data.reply ?? "");
-  }
-
   async function handleAgentTurn(userText: string) {
+    if (statusRef.current === "thinking" || statusRef.current === "speaking") return;
+
     setStatus("thinking");
 
-    // Pro Mode: über API Endpoint
     if (modeRef.current === "pro") {
       try {
         const reply = await runProTurn(userText);
@@ -208,7 +231,6 @@ export default function Page() {
       }
     }
 
-    // Browser Mode: lokaler Day1 Flow
     const out = runAgentTurn({
       userText,
       state: flowStateRef.current,
@@ -220,12 +242,17 @@ export default function Page() {
     setSummary(out.summary ?? (out.isDone ? out.summary ?? summary : summary));
 
     push("agent", out.reply);
+    await speak(out.reply);
+  }
 
-    if (modeRef.current === "browser") {
-      await speak(out.reply);
-    } else {
-      setStatus("idle");
-    }
+  function submitTypedText() {
+    const v = (typedText ?? "").toString().trim();
+    if (!v) return;
+
+    stopSpeaking();
+    setTypedText("");
+    push("user", v);
+    void handleAgentTurn(v);
   }
 
   function submitTypedContact() {
@@ -244,12 +271,10 @@ export default function Page() {
       if (p.startsWith("00")) p = "+" + p.slice(2);
       if (/^49\d+/.test(p)) p = "+49" + p.slice(2);
       if (/^0\d+/.test(p)) p = "+49" + p.slice(1);
-
       if (!p.startsWith("+49")) return null;
 
       const digits = p.replace(/[^\d]/g, "");
       if (digits.length < 11) return null;
-
       return p;
     };
 
@@ -280,22 +305,19 @@ export default function Page() {
     const nextSlots = { ...slotsRef.current, contact };
     setSlots(nextSlots);
     setContactDraft("");
-
     setFlowState("ASK_TIMEWINDOW");
 
-    const reply =
-      "Danke dir. Nenn mir bitte zuerst ein Datum oder einen Wochentag und danach die passende Uhrzeit oder Tageszeit.";
+    const reply = "Danke dir. Nenn mir bitte zuerst ein Datum oder einen Wochentag und danach die passende Uhrzeit oder Tageszeit.";
     push("agent", reply);
     void speak(reply);
   }
 
   function startRecognition() {
-    // SpeechRecognition soll in Pro UND Browser funktionieren.
-    // Aber: Im Browser-Flow bleibt beim Kontakt-Step die Eingabe per Textfeld (wie bisher).
+    if (!browserSupported) return;
+
+    // Free-mode contact remains typed only
     if (modeRef.current === "browser" && flowStateRef.current === "ASK_CONTACT") {
-      void speak(
-        "Bitte gib jetzt deine E-Mail oder Telefonnummer in das Eingabefeld ein. Sprache ist hier deaktiviert."
-      );
+      void speak("Bitte gib jetzt deine E-Mail oder Telefonnummer in das Eingabefeld ein. Sprache ist hier deaktiviert.");
       return;
     }
 
@@ -331,9 +353,7 @@ export default function Page() {
           if (modeRef.current === "browser" && flowStateRef.current === "ASK_CONTACT") {
             finalTextRef.current = "";
             setTranscript("");
-            void speak(
-              "Bitte gib jetzt deine E-Mail oder Telefonnummer in das Eingabefeld ein. Sprache ist hier deaktiviert."
-            );
+            void speak("Bitte gib jetzt deine E-Mail oder Telefonnummer in das Eingabefeld ein. Sprache ist hier deaktiviert.");
             return;
           }
 
@@ -360,26 +380,7 @@ export default function Page() {
   }
 
   function resetConversation() {
-    stopSpeaking();
-    try {
-      recRef.current?.abort();
-    } catch {}
-    recRef.current = null;
-
-    setIsRecording(false);
-    setStatus("idle");
-    setInterim("");
-    setTranscript("");
-    setSlots({});
-    setSummary("");
-    setContactDraft("");
-
-    const first = runAgentTurn({ userText: "", state: "WELCOME", slots: {} });
-    setFlowState(first.nextState);
-    setSlots(first.nextSlots);
-    setSummary(first.summary ?? "");
-    setChat([{ id: uid(), role: "agent", text: first.reply, ts: Date.now() }]);
-    void speak(first.reply);
+    void initConversation(modeRef.current);
   }
 
   async function copySummary() {
@@ -486,20 +487,12 @@ export default function Page() {
         fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Arial",
       }}
     >
-      <h1
-        style={{
-          fontSize: 26,
-          fontWeight: 800,
-          letterSpacing: 0.2,
-          textAlign: "center",
-          marginBottom: 8,
-        }}
-      >
+      <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: 0.2, textAlign: "center", marginBottom: 8 }}>
         Everlast Voice Agent
       </h1>
 
       <p style={{ textAlign: "center", color: "#444", marginTop: 0, marginBottom: 18, lineHeight: 1.55 }}>
-        Tag 1. Browser Mode MVP ohne API Keys. Pro Mode ist aktiv.
+        Tag 3. Free: Browser Mode. Pro: API + Voice.
       </p>
 
       <div
@@ -519,6 +512,7 @@ export default function Page() {
             onChange={(e) => {
               const v = e.target.value as Mode;
               setMode(v);
+              void initConversation(v);
             }}
             style={selectStyle}
           >
@@ -538,19 +532,11 @@ export default function Page() {
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
         <div style={card}>
-          <div
-            style={{
-              display: "flex",
-              gap: 10,
-              flexWrap: "wrap",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between" }}>
             <div>
               <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>Voice Control</h3>
               <p style={{ margin: "6px 0 0 0", color: "#444", lineHeight: 1.55, fontSize: 15.5 }}>
-                SpeechRecognition + Browser TTS. In Free bleibt Kontakt per Eingabefeld, Pro kann per Sprache laufen.
+                SpeechRecognition + Browser TTS. Free: Sprache + Text. Pro: Sprache + Text (API) mit gesprochenen Antworten.
               </p>
             </div>
 
@@ -576,19 +562,47 @@ export default function Page() {
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 14 }}>
-            <div style={{ background: "#fff", color: "#111", caretColor: "#111", border: "1px solid #e7e7e7", borderRadius: 12, padding: 12 }}>
+            <div
+              style={{
+                background: "#fff",
+                color: "#111",
+                caretColor: "#111",
+                border: "1px solid #e7e7e7",
+                borderRadius: 12,
+                padding: 12,
+              }}
+            >
               <div style={{ fontWeight: 900, marginBottom: 6 }}>Interim</div>
               <div style={{ color: "#444", lineHeight: 1.55, fontSize: 15.5, minHeight: 48 }}>{interim || " "}</div>
             </div>
 
-            <div style={{ background: "#fff", color: "#111", caretColor: "#111", border: "1px solid #e7e7e7", borderRadius: 12, padding: 12 }}>
+            <div
+              style={{
+                background: "#fff",
+                color: "#111",
+                caretColor: "#111",
+                border: "1px solid #e7e7e7",
+                borderRadius: 12,
+                padding: 12,
+              }}
+            >
               <div style={{ fontWeight: 900, marginBottom: 6 }}>Final</div>
               <div style={{ color: "#444", lineHeight: 1.55, fontSize: 15.5, minHeight: 48 }}>{transcript || " "}</div>
             </div>
           </div>
 
-          {flowState === "ASK_CONTACT" && (
-            <div style={{ marginTop: 14, background: "#fff", color: "#111", caretColor: "#111", border: "1px solid #e7e7e7", borderRadius: 12, padding: 12 }}>
+          {mode === "browser" && flowState === "ASK_CONTACT" && (
+            <div
+              style={{
+                marginTop: 14,
+                background: "#fff",
+                color: "#111",
+                caretColor: "#111",
+                border: "1px solid #e7e7e7",
+                borderRadius: 12,
+                padding: 12,
+              }}
+            >
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                 <div style={{ fontWeight: 900 }}>Kontakt eingeben</div>
                 <span style={pill}>E-Mail oder Telefon (+49)</span>
@@ -611,7 +625,11 @@ export default function Page() {
               />
 
               <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
-                <button onClick={submitTypedContact} style={!contactDraft.trim() ? buttonDisabled : button} disabled={!contactDraft.trim()}>
+                <button
+                  onClick={submitTypedContact}
+                  style={!contactDraft.trim() ? buttonDisabled : button}
+                  disabled={!contactDraft.trim()}
+                >
                   Senden
                 </button>
               </div>
@@ -688,14 +706,24 @@ export default function Page() {
             </button>
           </div>
 
-          <div style={{ marginTop: 12, background: "#fff", color: "#111", caretColor: "#111", border: "1px solid #e7e7e7", borderRadius: 12, padding: 12 }}>
+          <div
+            style={{
+              marginTop: 12,
+              background: "#fff",
+              color: "#111",
+              caretColor: "#111",
+              border: "1px solid #e7e7e7",
+              borderRadius: 12,
+              padding: 12,
+            }}
+          >
             <div style={{ fontSize: 15.5, lineHeight: 1.55, color: "#222", whiteSpace: "pre-wrap", minHeight: 84 }}>
               {summary.trim() || "Noch keine Zusammenfassung. Sobald du den Confirm Step erreichst, erscheint sie hier."}
             </div>
           </div>
 
           <p style={{ margin: "12px 0 0 0", color: "#444", lineHeight: 1.55, fontSize: 15.5 }}>
-            Hinweis: Free nutzt den festen Day-Flow. Pro nutzt die API Route und spricht Antworten automatisch.
+            Hinweis: Free nutzt den festen Day-Flow. Pro nutzt die Pro-API und dieselbe Voice-Steuerung.
           </p>
         </div>
       </div>
