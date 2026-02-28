@@ -120,7 +120,7 @@ https://youtu.be/u3Sspg0-WH4
 Day 3  
 https://youtu.be/obD8Jlf9nw4
 
-## Author## Author
+## Author
 
 Phillip Kley  
 Everlast Voice Agent Prototype
