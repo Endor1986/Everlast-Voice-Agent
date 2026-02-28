@@ -43,27 +43,27 @@ Die finale Entscheidung, ob der produktive Betrieb später lokal oder online lä
 
 ## Day 1, Free Mode MVP
 
-- **Projektbasis eingerichtet** mit Next.js und grundlegender Struktur.
-- **Voice UI Grundgerüst** vorbereitet, einschließlich der grundlegenden Eingabefelder und Steuerungselemente.
-- **SpeechRecognition** für **Voice Input** integriert.
-- **Browser TTS (Text-to-Speech)** für **Voice Output** aktiviert.
-- **Free Mode MVP** entwickelt, um Sprach-Input und -Output direkt im Browser zu ermöglichen.
-- **Lokale Entwicklungsumgebung** eingerichtet und getestet.
+- Projektbasis eingerichtet mit Next.js und grundlegender Struktur
+- Voice UI Grundgerüst vorbereitet, inklusive grundlegender Eingabefelder und Steuerung
+- SpeechRecognition für Voice Input integriert
+- Browser TTS (Text to Speech) für Voice Output aktiviert
+- Free Mode MVP entwickelt, um Sprach Input und Output direkt im Browser zu ermöglichen
+- Lokale Entwicklungsumgebung eingerichtet und getestet
 
 ## Day 2, Pro Mode, Local AI Integration
 
-- **Pro Mode** aktiviert mit Nutzung von `/api/pro` für Local AI (z. B. Ollama).
-- **Antworten aus der lokalen KI** werden nun per API verarbeitet.
-- **Sprachausgabe** im **Pro Mode** mit der `speak(...)`-Methode hinzugefügt, um Antworten direkt vorzulesen.
-- **Fehlerbehandlung und Stabilität** im Pro Mode verbessert, damit auch Fehlermeldungen laut ausgesprochen werden.
-- **Test der Pro-Modus-Integration** mit Ollama, um AI-basierte Dialoge zu ermöglichen.
+- Pro Mode aktiviert mit Nutzung von `/api/pro` für Local AI (z. B. Ollama)
+- Antworten aus der lokalen KI werden per API verarbeitet
+- Sprachausgabe im Pro Mode über `speak(...)`, um Antworten direkt vorzulesen
+- Fehlerbehandlung und Stabilität im Pro Mode verbessert, damit auch Fehlermeldungen gesprochen werden
+- Pro Modus Integration mit Ollama getestet
 
 ## Day 3, Voice End to End
 
-- **Voice Input** ist aktiv (SpeechRecognition)
-- **Voice Output** ist aktiv (Browser TTS)
-- **Free Mode** nutzt den bestehenden Flow (AgentFlow)
-- **Pro Mode** nutzt `/api/pro` für Local AI (z. B. Ollama) und liest Antworten vor
+- Voice Input ist aktiv (SpeechRecognition)
+- Voice Output ist aktiv (Browser TTS)
+- Free Mode nutzt den bestehenden Flow (AgentFlow)
+- Pro Mode nutzt `/api/pro` für Local AI (z. B. Ollama) und liest Antworten vor
 
 ## Tech Stack
 
@@ -76,22 +76,24 @@ Die finale Entscheidung, ob der produktive Betrieb später lokal oder online lä
 
 ## Projektstruktur
 
-src/  
-├── app/page.tsx  
-│   UI, Mode Switch, Voice Control, Free Flow und Pro Flow  
-│  
-├── lib/day1/agentFlow.ts  
-│   Dialog Logik und Zustandsmaschine (Free)  
-│  
-├── lib/day1/browserSpeech.ts  
-│   SpeechRecognition Wrapper und Browser TTS  
-│  
-├── app/api/pro/route.ts  
-│   Pro API Route, lokale KI über Ollama  
-│  
-├── lib/day1/types.ts  
-│   Typdefinitionen
-
+```text
+src/
+├── app/
+│   ├── page.tsx
+│   │   UI, Mode Switch, Voice Control, Free Flow und Pro Flow
+│   └── api/
+│       └── pro/
+│           └── route.ts
+│               Pro API Route, lokale KI über Ollama
+└── lib/
+    └── day1/
+        ├── agentFlow.ts
+        │   Dialog Logik und Zustandsmaschine (Free)
+        ├── browserSpeech.ts
+        │   SpeechRecognition Wrapper und Browser TTS
+        └── types.ts
+            Typdefinitionen
+```
 
 ## Environment
 
@@ -123,7 +125,6 @@ erledigt: Provider Anbindung, zuerst Local
 
 Day 3  
 erledigt: Voice Agent Verbindung und erstes End to End  
-
 
 ## Videos
 
