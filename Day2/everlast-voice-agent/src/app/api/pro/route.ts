@@ -4,10 +4,14 @@ type OllamaChatResponse = {
   message?: { content?: string };
 };
 
+type ProRequestBody = {
+  userText?: string;
+};
+
 export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}));
-    const userText = String((body as any)?.userText ?? "").trim();
+    const userText = String((body as ProRequestBody)?.userText ?? "").trim();
 
     if (!userText) {
       return NextResponse.json({
@@ -38,9 +42,10 @@ export async function POST(req: Request) {
     const reply = String(data?.message?.content ?? "").trim() || "Keine Antwort erhalten.";
 
     return NextResponse.json({ ok: true, reply });
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : "unknown error";
     return NextResponse.json(
-      { ok: false, error: e?.message ?? "unknown error" },
+      { ok: false, error: message },
       { status: 500 }
     );
   }

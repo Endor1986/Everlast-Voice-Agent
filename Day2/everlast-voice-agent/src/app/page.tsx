@@ -14,6 +14,13 @@ function formatTime(ts: number) {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+
+type ProApiResponse = {
+  ok?: boolean;
+  reply?: string;
+  error?: string;
+};
+
 export default function Page() {
   const locale = "de-DE";
 
@@ -40,8 +47,6 @@ const [flowState, setFlowState] = useState<FlowState>("WELCOME");
     setBrowserSupported(isBrowserRecognitionSupported());
   }, []);
 
-  const proDisabled = false;
-
   const flowStateRef = useRef<FlowState>("WELCOME");
   const slotsRef = useRef<Slots>({});
   const statusRef = useRef<AgentStatus>("idle");
@@ -51,7 +56,7 @@ const [flowState, setFlowState] = useState<FlowState>("WELCOME");
 
   useEffect(() => {
     flowStateRef.current = flowState;
-  }, [flowState]);
+  }, [flowState, mode]);
 
   useEffect(() => {
     slotsRef.current = slots;
@@ -76,8 +81,32 @@ const [flowState, setFlowState] = useState<FlowState>("WELCOME");
   const [contactDraft, setContactDraft] = useState("");
   const contactInputRef = useRef<HTMLInputElement | null>(null);
 
-    function push(role: "user" | "agent", text: string) {
+  function push(role: "user" | "agent", text: string) {
     setChat((prev) => [...prev, { id: uid(), role, text, ts: Date.now() }]);
+  }
+
+  async function startConversationForMode(nextMode: Mode) {
+    stopSpeaking();
+    setInterim("");
+    setTranscript("");
+    setContactDraft("");
+    setSlots({});
+    setSummary("");
+
+    if (nextMode === "pro") {
+      setFlowState("DONE");
+      const intro = "Hi, ich bin dein Everlast Pro Agent. Du kannst mir hier schreiben oder sprechen, und ich antworte direkt aus dem Pro-Mode.";
+      setChat([{ id: uid(), role: "agent", text: intro, ts: Date.now() }]);
+      await speak(intro);
+      return;
+    }
+
+    const first = runAgentTurn({ userText: "", state: "WELCOME", slots: {} });
+    setFlowState(first.nextState);
+    setSlots(first.nextSlots);
+    setSummary(first.summary ?? "");
+    setChat([{ id: uid(), role: "agent", text: first.reply, ts: Date.now() }]);
+    await speak(first.reply);
   }
 
   function submitTypedText() {
@@ -161,7 +190,7 @@ const [flowState, setFlowState] = useState<FlowState>("WELCOME");
   }, []);
 
   useEffect(() => {
-    if (flowState === "ASK_CONTACT") {
+    if (mode === "browser" && flowState === "ASK_CONTACT") {
       try {
         recRef.current?.stop();
       } catch {}
@@ -172,21 +201,8 @@ const [flowState, setFlowState] = useState<FlowState>("WELCOME");
         contactInputRef.current?.select();
       }, 0);
     }
-  }, [flowState]);
+  }, [flowState, mode]);
 
-  async function runProTurn(userText: string) {
-  const res = await fetch("/api/pro", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userText }),
-  });
-
-  const data = await res.json().catch(() => ({} as any));
-  if (!res.ok || !data?.ok) {
-    throw new Error(data?.error || "Pro API Fehler");
-  }
-  return String(data.reply ?? "");
-}
 
 async function handleAgentTurn(userText: string) {
     setStatus("thinking");
@@ -200,18 +216,18 @@ async function handleAgentTurn(userText: string) {
           body: JSON.stringify({ userText }),
         });
 
-        const data = await res.json().catch(() => ({} as any));
+        const data = (await res.json().catch(() => ({}))) as ProApiResponse;
         if (!res.ok || !data?.ok) {
           throw new Error(String(data?.error ?? "Pro API Fehler"));
         }
 
         const reply = String(data?.reply ?? "");
         push("agent", reply);
-
-        setStatus("idle");
+        await speak(reply);
         return;
-      } catch (err: any) {
-        push("agent", "Pro Fehler: " + String(err?.message ?? "unknown"));
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : "unknown";
+        push("agent", "Pro Fehler: " + String(message));
         setStatus("idle");
         return;
       }
@@ -298,9 +314,7 @@ async function handleAgentTurn(userText: string) {
   }
 
   function startRecognition() {
-    if (modeRef.current !== "browser") return;
-
-    if (flowStateRef.current === "ASK_CONTACT") {
+    if (modeRef.current === "browser" && flowStateRef.current === "ASK_CONTACT") {
       void speak("Bitte gib jetzt deine E-Mail oder Telefonnummer in das Eingabefeld ein. Sprache ist hier deaktiviert.");
       return;
     }
@@ -334,7 +348,7 @@ async function handleAgentTurn(userText: string) {
           const finalText = (finalTextRef.current || transcriptRef.current || interimRef.current).trim();
           setInterim("");
 
-          if (flowStateRef.current === "ASK_CONTACT") {
+          if (modeRef.current === "browser" && flowStateRef.current === "ASK_CONTACT") {
             finalTextRef.current = "";
             setTranscript("");
             void speak("Bitte gib jetzt deine E-Mail oder Telefonnummer in das Eingabefeld ein. Sprache ist hier deaktiviert.");
@@ -372,18 +386,7 @@ async function handleAgentTurn(userText: string) {
 
     setIsRecording(false);
     setStatus("idle");
-    setInterim("");
-    setTranscript("");
-    setSlots({});
-    setSummary("");
-    setContactDraft("");
-
-    const first = runAgentTurn({ userText: "", state: "WELCOME", slots: {} });
-    setFlowState(first.nextState);
-    setSlots(first.nextSlots);
-    setSummary(first.summary ?? "");
-    setChat([{ id: uid(), role: "agent", text: first.reply, ts: Date.now() }]);
-    void speak(first.reply);
+    void startConversationForMode(modeRef.current);
   }
 
   async function copySummary() {
@@ -489,7 +492,9 @@ async function handleAgentTurn(userText: string) {
       <h1 style={{ fontSize: 26, fontWeight: 800, letterSpacing: 0.2, textAlign: "center", marginBottom: 8 }}>Everlast Voice Agent</h1>
 
       <p style={{ textAlign: "center", color: "#444", marginTop: 0, marginBottom: 18, lineHeight: 1.55 }}>
-        Tag 1. Browser Mode MVP ohne API Keys. Pro Mode kommt an Tag 2.
+        {mode === "pro"
+          ? "Pro Mode aktiv: Schreiben und Sprechen möglich, Antworten kommen direkt über die Pro-API."
+          : "Free Mode aktiv: Geführter Browser-Dialog ohne API Keys."}
       </p>
 
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
@@ -500,6 +505,8 @@ async function handleAgentTurn(userText: string) {
             onChange={(e) => {
               const v = e.target.value as Mode;
               setMode(v);
+              modeRef.current = v;
+              void startConversationForMode(v);
             }}
             style={selectStyle}
           >
@@ -519,7 +526,9 @@ async function handleAgentTurn(userText: string) {
             <div>
               <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900 }}>Voice Control</h3>
               <p style={{ margin: "6px 0 0 0", color: "#444", lineHeight: 1.55, fontSize: 15.5 }}>
-                SpeechRecognition + Browser TTS. Bei Kontakt ist Sprache deaktiviert.
+                {mode === "pro"
+                  ? "SpeechRecognition + Browser TTS im Pro-Mode aktiv."
+                  : "SpeechRecognition + Browser TTS. Bei Kontakt ist Sprache deaktiviert."}
               </p>
             </div>
 
@@ -527,8 +536,8 @@ async function handleAgentTurn(userText: string) {
               {!isRecording ? (
                 <button
                   onClick={startRecognition}
-                  disabled={!browserSupported || mode !== "browser" || flowState === "ASK_CONTACT"}
-                  style={!browserSupported || mode !== "browser" || flowState === "ASK_CONTACT" ? buttonDisabled : button}
+                  disabled={!browserSupported || (mode === "browser" && flowState === "ASK_CONTACT")}
+                  style={!browserSupported || (mode === "browser" && flowState === "ASK_CONTACT") ? buttonDisabled : button}
                 >
                   Start
                 </button>
@@ -668,7 +677,7 @@ async function handleAgentTurn(userText: string) {
           </div>
 
           <p style={{ margin: "12px 0 0 0", color: "#444", lineHeight: 1.55, fontSize: 15.5 }}>
-            Hinweis: Pro Mode bleibt in Tag 1 deaktiviert. Tag 2 bringt Whisper, GPT und optional API TTS.
+            Hinweis: Pro Mode ist in Day 2 aktiv und nutzt lokal Ollama über /api/pro.
           </p>
         </div>
       </div>

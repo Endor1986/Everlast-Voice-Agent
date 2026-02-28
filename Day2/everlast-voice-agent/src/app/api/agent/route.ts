@@ -12,7 +12,7 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(result);
-  } catch (e) {
+  } catch {
     return NextResponse.json({
       reply: "Server Fehler",
       nextState: "ASK_GOAL",
