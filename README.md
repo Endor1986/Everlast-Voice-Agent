@@ -62,19 +62,20 @@ Die finale Entscheidung, ob der produktive Betrieb später lokal oder online lä
 
 src/  
 ├── app/page.tsx  
-│   UI, Voice Control, Flow Rendering  
+│   UI, Mode Switch, Voice Control, Free Flow und Pro Flow  
 │  
 ├── lib/day1/agentFlow.ts  
-│   Dialog Logik und Zustandsmaschine  
+│   Dialog Logik und Zustandsmaschine (Free)  
 │  
 ├── lib/day1/browserSpeech.ts  
-│   SpeechRecognition Wrapper  
+│   SpeechRecognition Wrapper und Browser TTS  
 │  
 ├── app/api/pro/route.ts  
-│   Provider Endpoint, Routing über `.env.local`  
+│   Pro API Route, lokale KI über Ollama  
 │  
-├── types/  
-│   Typdefinitionen  
+├── lib/day1/types.ts  
+│   Typdefinitionen
+
 
 ## Environment
 
@@ -107,24 +108,17 @@ erledigt: Provider Anbindung, zuerst Local
 Day 3  
 erledigt: Voice Agent Verbindung und erstes End to End  
 
-Optional (wenn du später weitergehst)  
-
-Day 4  
-UI Polishing und klare Mode Indikatoren  
-
-Day 5  
-Stabilisierung der Dialog Steuerung, besseres Prompting für Pro, optional weitere Voices  
 
 ## Videos
 
 Day 1  
-folgt  
+https://youtu.be/cIXShDP3qwU
 
 Day 2  
-folgt  
+https://youtu.be/u3Sspg0-WH4
 
 Day 3  
-folgt  
+https://youtu.be/obD8Jlf9nw4
 
 ## Author## Author
 
