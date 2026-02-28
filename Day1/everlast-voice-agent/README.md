@@ -41,18 +41,22 @@ Das System wird bewusst schrittweise aufgebaut, um jeden Entwicklungstag sauber 
 ## Projektstruktur
 
 src/
- ├── app/page.tsx
- │   UI, Voice Control, Flow Rendering
- │
- ├── lib/day1/agentFlow.ts
- │   Dialog-Logik / Zustandsmaschine
- │
- ├── lib/day1/browserSpeech.ts
- │   SpeechRecognition Wrapper
- │
- ├── types/
- │   Typdefinitionen
-
+├── app/
+│   ├── page.tsx
+│   │   UI, Mode Switch, Voice Control, Free Flow und Pro Flow
+│   └── api/
+│       └── pro/
+│           └── route.ts
+│               Pro API Route, Local AI (z.B. Ollama)
+│
+└── lib/
+    └── day1/
+        ├── agentFlow.ts
+        │   Dialog Logik und Zustandsmaschine (Free)
+        ├── browserSpeech.ts
+        │   SpeechRecognition Wrapper und Browser TTS
+        └── types.ts
+            Typdefinitionen
 ---
 
 ## Development
