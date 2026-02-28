@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "export:day3": "bash scripts/export-day3.sh",
+    "show:day3": "bash scripts/export-day3.sh && cat DAY3_COPY_PASTE.md"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -23,3 +25,4 @@
     "react-dom": "^18.3.1"
   }
 }
+
